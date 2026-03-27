@@ -31,8 +31,8 @@ export default function DevelopmentLineChart({ data }: Props) {
         <XAxis
           dataKey="date"
           tick={{ fill: '#94a3b8', fontSize: 11 }}
-          tickFormatter={(val: string) => {
-            const d = new Date(val)
+          tickFormatter={(val) => {
+            const d = new Date(val as string)
             return `${d.getDate()}/${d.getMonth() + 1}`
           }}
           axisLine={false}
@@ -52,8 +52,8 @@ export default function DevelopmentLineChart({ data }: Props) {
             color: '#f1f5f9',
             fontSize: 12,
           }}
-          labelFormatter={(val: string) => new Date(val).toLocaleDateString('en-GB')}
-          formatter={(val: number) => [val.toFixed(2), 'Dev Score']}
+          labelFormatter={(val) => new Date(val as string).toLocaleDateString('en-GB')}
+          formatter={(val) => [(val as number).toFixed(2), 'Dev Score']}
         />
         <Line
           type="monotone"

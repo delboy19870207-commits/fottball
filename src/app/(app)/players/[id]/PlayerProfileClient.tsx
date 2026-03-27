@@ -150,7 +150,7 @@ export default function PlayerProfileClient({ player, timeline, ratings, flags, 
                             : '—'}
                         </td>
                         <td className="py-2.5 pr-2 text-slate-300 truncate max-w-[90px]">
-                          {(r.match as { opposition?: string })?.opposition ?? '—'}
+                          {r.match?.opposition ?? '—'}
                         </td>
                         <td className="py-2.5 pr-2">
                           <RatingDot v={r.effort_rating} />

@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+type CookieEntry = { name: string; value: string; options: Record<string, unknown> }
+
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies()
   return createServerClient(
@@ -11,10 +13,10 @@ export async function createServerSupabaseClient() {
         getAll() {
           return cookieStore.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieEntry[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, options as never)
             )
           } catch {
             // Server component — cookies can't be set here, handled in middleware

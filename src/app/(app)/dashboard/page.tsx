@@ -1,13 +1,16 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { calcDevelopmentScore } from '@/lib/calculations'
-import type { MatchPlayerRating, Match, Player } from '@/types/database'
+import type { MatchPlayerRating, Player } from '@/types/database'
 import DashboardClient from './DashboardClient'
+
+// Supabase infers joined relations as T | T[]; unwrap safely
+function unwrapJoin<T>(val: T | T[] | null | undefined): T | null {
+  if (val == null) return null
+  return Array.isArray(val) ? (val[0] ?? null) : val
+}
 
 async function getDashboardData(clubId: string, ageGroupId?: string) {
   const supabase = await createServerSupabaseClient()
-
-  // Base query builder
-  const agFilter = ageGroupId ? `.eq('age_group_id', '${ageGroupId}')` : ''
 
   // Total players
   let playersQuery = supabase
@@ -38,7 +41,7 @@ async function getDashboardData(clubId: string, ageGroupId?: string) {
   if (ageGroupId) sessionsQuery = sessionsQuery.eq('age_group_id', ageGroupId)
   const { count: totalSessions } = await sessionsQuery
 
-  // Recent matches (last 5)
+  // Recent matches (last 8)
   let recentMatchesQuery = supabase
     .from('matches')
     .select('*, age_group:age_groups(name)')
@@ -46,14 +49,20 @@ async function getDashboardData(clubId: string, ageGroupId?: string) {
     .order('date', { ascending: false })
     .limit(8)
   if (ageGroupId) recentMatchesQuery = recentMatchesQuery.eq('age_group_id', ageGroupId)
-  const { data: recentMatches } = await recentMatchesQuery
+  const { data: recentMatchesRaw } = await recentMatchesQuery
+
+  // Normalise the age_group join on each match
+  const recentMatches = (recentMatchesRaw ?? []).map((m) => ({
+    ...m,
+    age_group: unwrapJoin(m.age_group),
+  }))
 
   // This month's ratings for top performers
   const thisMonth = new Date()
   thisMonth.setDate(1)
   const monthStart = thisMonth.toISOString().split('T')[0]
 
-  let ratingsQuery = supabase
+  const { data: monthRatings } = await supabase
     .from('match_player_ratings')
     .select(`
       *,
@@ -62,18 +71,16 @@ async function getDashboardData(clubId: string, ageGroupId?: string) {
     `)
     .gte('match.date', monthStart)
 
-  const { data: monthRatings } = await ratingsQuery
-
-  // Filter by club/age group manually since we joined
+  // Filter by club/age group — unwrap joined match which may be typed as array
   const filteredRatings = (monthRatings ?? []).filter((r) => {
-    const m = Array.isArray(r.match) ? r.match[0] : r.match
+    const m = unwrapJoin(r.match)
     if (!m) return false
     if (m.club_id !== clubId) return false
     if (ageGroupId && m.age_group_id !== ageGroupId) return false
     return true
   })
 
-  // Group ratings by player, calc avg dev score
+  // Group by player, calc avg dev score
   const playerRatingMap = new Map<string, { player: Player; scores: number[] }>()
   for (const r of filteredRatings as MatchPlayerRating[]) {
     if (!r.player) continue
@@ -108,7 +115,7 @@ async function getDashboardData(clubId: string, ageGroupId?: string) {
 
   const ageGroupScores = (ageGroups ?? []).map((ag) => {
     const agRatings = (allRatings ?? []).filter((r) => {
-      const m = Array.isArray(r.match) ? r.match[0] : r.match
+      const m = unwrapJoin(r.match)
       return m?.club_id === clubId && m?.age_group_id === ag.id
     })
     const avg =
@@ -131,7 +138,7 @@ async function getDashboardData(clubId: string, ageGroupId?: string) {
     totalMatches: totalMatches ?? 0,
     totalSessions: totalSessions ?? 0,
     winRate,
-    recentMatches: recentMatches ?? [],
+    recentMatches,
     topPerformers,
     ageGroupScores,
     ageGroups: ageGroups ?? [],
@@ -146,7 +153,6 @@ export default async function DashboardPage({
   const { ag: selectedAg } = await searchParams
   const supabase = await createServerSupabaseClient()
 
-  // Get user's club
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -165,9 +171,11 @@ export default async function DashboardPage({
       </div>
     )
   }
+
   const data = await getDashboardData(clubId, selectedAg)
 
-  const clubRaw = coachClub?.club
-  const clubName = (Array.isArray(clubRaw) ? clubRaw[0] : clubRaw)?.name ?? 'Cascade Youth FC'
+  const clubRow = unwrapJoin(coachClub?.club)
+  const clubName = clubRow?.name ?? 'Cascade Youth FC'
+
   return <DashboardClient {...data} selectedAg={selectedAg} clubName={clubName} />
 }

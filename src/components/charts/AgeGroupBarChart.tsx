@@ -55,7 +55,7 @@ export default function AgeGroupBarChart({ data }: Props) {
             color: '#f1f5f9',
             fontSize: 12,
           }}
-          formatter={(val: number) => [val.toFixed(2), 'Avg Dev Score']}
+          formatter={(val) => [(val as number).toFixed(2), 'Avg Dev Score']}
         />
         <Bar dataKey="score" radius={[4, 4, 0, 0]} maxBarSize={60}>
           {data.map((_, index) => (
