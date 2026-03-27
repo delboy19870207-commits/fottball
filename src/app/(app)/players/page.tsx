@@ -6,9 +6,10 @@ import PlayersClient from './PlayersClient'
 export default async function PlayersPage({
   searchParams,
 }: {
-  searchParams: { ag?: string }
+  searchParams: Promise<{ ag?: string }>
 }) {
-  const supabase = createServerSupabaseClient()
+  const { ag } = await searchParams
+  const supabase = await createServerSupabaseClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -38,8 +39,8 @@ export default async function PlayersPage({
     .eq('is_active', true)
     .order('last_name')
 
-  if (searchParams.ag) {
-    playersQuery = playersQuery.eq('age_group_id', searchParams.ag)
+  if (ag) {
+    playersQuery = playersQuery.eq('age_group_id', ag)
   }
 
   const { data: players } = await playersQuery
@@ -87,7 +88,7 @@ export default async function PlayersPage({
       <PlayersClient
         players={enriched}
         ageGroups={ageGroups ?? []}
-        selectedAg={searchParams.ag}
+        selectedAg={ag}
       />
     </div>
   )

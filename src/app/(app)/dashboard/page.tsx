@@ -4,7 +4,7 @@ import type { MatchPlayerRating, Match, Player } from '@/types/database'
 import DashboardClient from './DashboardClient'
 
 async function getDashboardData(clubId: string, ageGroupId?: string) {
-  const supabase = createServerSupabaseClient()
+  const supabase = await createServerSupabaseClient()
 
   // Base query builder
   const agFilter = ageGroupId ? `.eq('age_group_id', '${ageGroupId}')` : ''
@@ -139,9 +139,10 @@ async function getDashboardData(clubId: string, ageGroupId?: string) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { ag?: string }
+  searchParams: Promise<{ ag?: string }>
 }) {
-  const supabase = createServerSupabaseClient()
+  const { ag: selectedAg } = await searchParams
+  const supabase = await createServerSupabaseClient()
 
   // Get user's club
   const {
@@ -162,8 +163,6 @@ export default async function DashboardPage({
       </div>
     )
   }
-
-  const selectedAg = searchParams.ag
   const data = await getDashboardData(clubId, selectedAg)
 
   return <DashboardClient {...data} selectedAg={selectedAg} clubName={(coachClub?.club as { name: string })?.name ?? 'Cascade Youth FC'} />

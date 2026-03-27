@@ -4,8 +4,9 @@ import { calcDevelopmentScore, buildDevelopmentTimeline, calcTrend } from '@/lib
 import type { MatchPlayerRating } from '@/types/database'
 import PlayerProfileClient from './PlayerProfileClient'
 
-export default async function PlayerProfilePage({ params }: { params: { id: string } }) {
-  const supabase = createServerSupabaseClient()
+export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createServerSupabaseClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -21,7 +22,7 @@ export default async function PlayerProfilePage({ params }: { params: { id: stri
   const { data: player } = await supabase
     .from('players')
     .select('*, age_group:age_groups(id, name)')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('club_id', coachClub.club_id)
     .single()
 
@@ -34,7 +35,7 @@ export default async function PlayerProfilePage({ params }: { params: { id: stri
       *,
       match:matches(id, date, opposition, our_score, their_score, competition, age_group_id)
     `)
-    .eq('player_id', params.id)
+    .eq('player_id', id)
     .order('match(date)', { ascending: true })
 
   const ratings = (ratingsRaw ?? []) as MatchPlayerRating[]
@@ -54,7 +55,7 @@ export default async function PlayerProfilePage({ params }: { params: { id: stri
   const { data: flagsRaw } = await supabase
     .from('session_player_flags')
     .select('*, session:training_sessions(id, date, focus_tags)')
-    .eq('player_id', params.id)
+    .eq('player_id', id)
     .order('session(date)', { ascending: false })
     .limit(20)
 
