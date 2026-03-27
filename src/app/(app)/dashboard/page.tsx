@@ -167,5 +167,7 @@ export default async function DashboardPage({
   }
   const data = await getDashboardData(clubId, selectedAg)
 
-  return <DashboardClient {...data} selectedAg={selectedAg} clubName={(coachClub?.club as { name: string })?.name ?? 'Cascade Youth FC'} />
+  const clubRaw = coachClub?.club
+  const clubName = (Array.isArray(clubRaw) ? clubRaw[0] : clubRaw)?.name ?? 'Cascade Youth FC'
+  return <DashboardClient {...data} selectedAg={selectedAg} clubName={clubName} />
 }
