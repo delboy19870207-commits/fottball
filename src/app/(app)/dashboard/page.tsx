@@ -66,9 +66,10 @@ async function getDashboardData(clubId: string, ageGroupId?: string) {
 
   // Filter by club/age group manually since we joined
   const filteredRatings = (monthRatings ?? []).filter((r) => {
-    if (!r.match) return false
-    if (r.match.club_id !== clubId) return false
-    if (ageGroupId && r.match.age_group_id !== ageGroupId) return false
+    const m = Array.isArray(r.match) ? r.match[0] : r.match
+    if (!m) return false
+    if (m.club_id !== clubId) return false
+    if (ageGroupId && m.age_group_id !== ageGroupId) return false
     return true
   })
 
@@ -106,9 +107,10 @@ async function getDashboardData(clubId: string, ageGroupId?: string) {
     `)
 
   const ageGroupScores = (ageGroups ?? []).map((ag) => {
-    const agRatings = (allRatings ?? []).filter(
-      (r) => r.match?.club_id === clubId && r.match?.age_group_id === ag.id
-    )
+    const agRatings = (allRatings ?? []).filter((r) => {
+      const m = Array.isArray(r.match) ? r.match[0] : r.match
+      return m?.club_id === clubId && m?.age_group_id === ag.id
+    })
     const avg =
       agRatings.length === 0
         ? 0
